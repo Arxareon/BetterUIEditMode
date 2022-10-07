@@ -7,7 +7,7 @@ local addonNameSpace, ns = ...
 --[[ WIDGET TOOLS DATA ]]
 
 --Version string
-ns.WidgetToolsVersion = "1.4.1"
+ns.WidgetToolsVersion = "1.5"
 
 --Global WidgetTools table containing toolbox subtables for each respective WidgetTools version (WidgetToolbox["version_string"])
 if not WidgetToolbox then WidgetToolbox = {} end
@@ -796,7 +796,7 @@ if not WidgetToolbox[ns.WidgetToolsVersion] then
 		--Title
 		local left = tooltip:GetName() .. "TextLeft" .. 1
 		local right = tooltip:GetName() .. "TextRight" .. 1
-		tooltip:AddFontStrings(tooltip:CreateFontString(left, nil, GameFontNormalMed1), tooltip:CreateFontString(right, nil, GameFontNormalMed1))
+		-- tooltip:AddFontStrings(tooltip:CreateFontString(left, nil, GameFontNormalMed1), tooltip:CreateFontString(right, nil, GameFontNormalMed1)) //FIXME: Throws LUA Error
 		_G[left]:SetFontObject(GameFontNormalMed1)
 		_G[right]:SetFontObject(GameFontNormalMed1)
 		return tooltip
@@ -981,7 +981,7 @@ if not WidgetToolbox[ns.WidgetToolsVersion] then
 		if t.font then text:SetFont(t.font.path, t.font.size, t.font.style) end
 		if t.color then text:SetTextColor(WidgetToolbox[ns.WidgetToolsVersion].UnpackColor(t.color)) end
 		if t.justify then text:SetJustifyH(t.justify) end
-		if t.wrap ~= false then text:SetWordWrap(t.wrap) end
+		-- if t.wrap ~= false then text:SetWordWrap(t.wrap) end //FIXME: Throws LUA Error
 		text:SetText(t.text)
 		return text
 	end
@@ -1273,9 +1273,9 @@ if not WidgetToolbox[ns.WidgetToolsVersion] then
 	WidgetToolbox[ns.WidgetToolsVersion].CreateOptionsPanel = function(t)
 		local name = ""
 		if t.name then name = t.name:gsub("%s+", "") end
-		local optionsPanel = CreateFrame("Frame", t.addon .. name .. "Options", InterfaceOptionsFramePanelContainer)
+		local optionsPanel = CreateFrame("Frame", t.addon .. name .. "Options", SettingsPanel.Container)
 		--Position, dimensions & visibility
-		optionsPanel:SetSize(InterfaceOptionsFramePanelContainer:GetSize())
+		optionsPanel:SetSize(SettingsPanel.Container:GetSize())
 		optionsPanel:SetPoint("TOPLEFT") --Preload the frame
 		optionsPanel:Hide()
 		--Set the category name
@@ -1851,7 +1851,7 @@ if not WidgetToolbox[ns.WidgetToolsVersion] then
 			if t.justify.h then editBox:SetJustifyH(t.justify.h) end
 			if t.justify.v then editBox:SetJustifyV(t.justify.v) end
 		end
-		if t.maxLetters then editBox:SetMaxLetters(t.maxLetters) end
+		-- if t.maxLetters then editBox:SetMaxLetters(t.maxLetters) end //FIXME: Throws LUA Error
 		if t.color and t.text then
 			local r, g, b, a = WidgetToolbox[ns.WidgetToolsVersion].UnpackColor(t.color)
 			t.text = "|c" .. WidgetToolbox[ns.WidgetToolsVersion].ColorToHex(r, g, b, a, true, false) .. t.text .. "|r"
@@ -2085,71 +2085,71 @@ if not WidgetToolbox[ns.WidgetToolsVersion] then
 	WidgetToolbox[ns.WidgetToolsVersion].CreateEditScrollBox = function(t)
 		local name = "EditBox"
 		if t.name then name = t.name:gsub("%s+", "") end
-		local scrollFrame = CreateFrame("ScrollFrame", (t.append ~= false and t.parent:GetName() or "") .. name, t.parent, "InputScrollFrameTemplate")
-		--Position & dimensions
-		if not t.position then scrollFrame:SetPoint("TOPLEFT") else
-			local offsetX = (t.position.offset or {}).x or 0
-			local offsetY = ((t.position.offset or {}).y or 0) - 20
-			WidgetToolbox[ns.WidgetToolsVersion].PositionFrame(scrollFrame, t.position.anchor or "TOPLEFT", t.position.relativeTo, t.position.relativePoint, offsetX, offsetY)
-		end
-		scrollFrame:SetSize(t.size.width, t.size.height)
-		local function ResizeEditBox()
-			local scrollBarOffset = _G[scrollFrame:GetName().."ScrollBar"]:IsShown() and 16 or 0
-			local counterOffset = t.charCount ~= false and (t.maxLetters or 0) > 0 and tostring(t.maxLetters - scrollFrame.EditBox:GetText():len()):len() * 6 + 3 or 0
-			scrollFrame.EditBox:SetWidth(scrollFrame:GetWidth() - scrollBarOffset - counterOffset)
-		end
-		ResizeEditBox()
-		--Scroll speed
-		if t.scrollSpeed then _G[scrollFrame:GetName() .. "ScrollBar"].scrollStep = t.scrollSpeed end
-		--Character counter
-		scrollFrame.CharCount:SetFontObject("GameFontDisableTiny2")
-		if t.charCount == false or (t.maxLetters or 0) == 0 then scrollFrame.CharCount:Hide() end
-		--Title
-		local title = t.title or t.name or "EditBox"
-		local label = WidgetToolbox[ns.WidgetToolsVersion].AddTitle({
-			parent = scrollFrame,
-			title = t.label ~= false and {
-				text = title,
-				offset = { x = -1, y = 20 },
-			} or nil,
-		})
-		--Set up the EditBox
-		SetEditBox(scrollFrame.EditBox, {
-			label = label,
-			text = t.text,
-			multiline = true,
-			maxLetters = t.maxLetters,
-			fontObject = t.fontObject or "ChatFontNormal",
-			color = t.color,
-			justify = t.justify,
-			readOnly = t.readOnly,
-			onChar = t.onChar,
-			onEnterPressed = t.onEnterPressed,
-			onEscapePressed = t.onEscapePressed,
-			onEvent = t.onEvent,
-			disabled = t.disabled,
-			dependencies = t.dependencies,
-			optionsData = t.optionsData,
-		})
-		--Events & behavior
-		t.scrollToTop = t.scrollToTop ~= false or nil
-		scrollFrame.EditBox:HookScript("OnTextChanged", function()
-			ResizeEditBox()
-			if t.scrollToTop then scrollFrame:SetVerticalScroll(0) end
-		end)
-		scrollFrame.EditBox:HookScript("OnEditFocusGained", function(self)
-			ResizeEditBox()
-			if t.scrollToTop ~= nil then t.scrollToTop = false end
-			self:HighlightText()
-		end)
-		scrollFrame.EditBox:HookScript("OnEditFocusLost", function(self)
-			if t.scrollToTop ~= nil then t.scrollToTop = true end
-			self:ClearHighlightText()
-		end)
-		--Tooltip
-		scrollFrame.EditBox:HookScript("OnEnter", function() WidgetToolbox[ns.WidgetToolsVersion].AddTooltip(nil, scrollFrame, "ANCHOR_RIGHT", title, t.tooltip) end)
-		scrollFrame.EditBox:HookScript("OnLeave", function() customTooltip:Hide() end)
-		return scrollFrame.EditBox, scrollFrame
+		-- local scrollFrame = CreateFrame("ScrollFrame", (t.append ~= false and t.parent:GetName() or "") .. name, t.parent, "InputScrollFrameTemplate")
+		-- --Position & dimensions
+		-- if not t.position then scrollFrame:SetPoint("TOPLEFT") else
+		-- 	local offsetX = (t.position.offset or {}).x or 0
+		-- 	local offsetY = ((t.position.offset or {}).y or 0) - 20
+		-- 	WidgetToolbox[ns.WidgetToolsVersion].PositionFrame(scrollFrame, t.position.anchor or "TOPLEFT", t.position.relativeTo, t.position.relativePoint, offsetX, offsetY)
+		-- end
+		-- scrollFrame:SetSize(t.size.width, t.size.height)
+		-- local function ResizeEditBox()
+		-- 	local scrollBarOffset = _G[scrollFrame:GetName().."ScrollBar"]:IsShown() and 16 or 0
+		-- 	local counterOffset = t.charCount ~= false and (t.maxLetters or 0) > 0 and tostring(t.maxLetters - scrollFrame.EditBox:GetText():len()):len() * 6 + 3 or 0
+		-- 	scrollFrame.EditBox:SetWidth(scrollFrame:GetWidth() - scrollBarOffset - counterOffset)
+		-- end
+		-- ResizeEditBox()
+		-- --Scroll speed
+		-- if t.scrollSpeed then _G[scrollFrame:GetName() .. "ScrollBar"].scrollStep = t.scrollSpeed end
+		-- --Character counter
+		-- scrollFrame.CharCount:SetFontObject("GameFontDisableTiny2")
+		-- if t.charCount == false or (t.maxLetters or 0) == 0 then scrollFrame.CharCount:Hide() end
+		-- --Title
+		-- local title = t.title or t.name or "EditBox"
+		-- local label = WidgetToolbox[ns.WidgetToolsVersion].AddTitle({
+		-- 	parent = scrollFrame,
+		-- 	title = t.label ~= false and {
+		-- 		text = title,
+		-- 		offset = { x = -1, y = 20 },
+		-- 	} or nil,
+		-- })
+		-- --Set up the EditBox
+		-- SetEditBox(scrollFrame.EditBox, {
+		-- 	label = label,
+		-- 	text = t.text,
+		-- 	multiline = true,
+		-- 	maxLetters = t.maxLetters,
+		-- 	fontObject = t.fontObject or "ChatFontNormal",
+		-- 	color = t.color,
+		-- 	justify = t.justify,
+		-- 	readOnly = t.readOnly,
+		-- 	onChar = t.onChar,
+		-- 	onEnterPressed = t.onEnterPressed,
+		-- 	onEscapePressed = t.onEscapePressed,
+		-- 	onEvent = t.onEvent,
+		-- 	disabled = t.disabled,
+		-- 	dependencies = t.dependencies,
+		-- 	optionsData = t.optionsData,
+		-- })
+		-- --Events & behavior
+		-- t.scrollToTop = t.scrollToTop ~= false or nil
+		-- scrollFrame.EditBox:HookScript("OnTextChanged", function()
+		-- 	ResizeEditBox()
+		-- 	if t.scrollToTop then scrollFrame:SetVerticalScroll(0) end
+		-- end)
+		-- scrollFrame.EditBox:HookScript("OnEditFocusGained", function(self)
+		-- 	ResizeEditBox()
+		-- 	if t.scrollToTop ~= nil then t.scrollToTop = false end
+		-- 	self:HighlightText()
+		-- end)
+		-- scrollFrame.EditBox:HookScript("OnEditFocusLost", function(self)
+		-- 	if t.scrollToTop ~= nil then t.scrollToTop = true end
+		-- 	self:ClearHighlightText()
+		-- end)
+		-- --Tooltip
+		-- scrollFrame.EditBox:HookScript("OnEnter", function() WidgetToolbox[ns.WidgetToolsVersion].AddTooltip(nil, scrollFrame, "ANCHOR_RIGHT", title, t.tooltip) end)
+		-- scrollFrame.EditBox:HookScript("OnLeave", function() customTooltip:Hide() end)
+		-- return scrollFrame.EditBox, scrollFrame
 	end
 
 	--[ CopyBox]
@@ -2315,7 +2315,7 @@ if not WidgetToolbox[ns.WidgetToolsVersion] then
 		--Font & text
 		valueBox:SetFontObject("GameFontHighlightSmall")
 		valueBox:SetJustifyH("CENTER")
-		valueBox:SetMaxLetters(tostring(math.floor(value.max)):len() + (decimals + (decimals > 0 and 1 or 0)) + (value.min < 0 and 1 or 0))
+		-- valueBox:SetMaxLetters(tostring(math.floor(value.max)):len() + (decimals + (decimals > 0 and 1 or 0)) + (value.min < 0 and 1 or 0)) //FIXME: Throws LUA Error
 		--Events & behavior
 		valueBox:SetAutoFocus(false)
 		valueBox:SetScript("OnShow", function(self) self:SetText(tostring(slider:GetValue()):gsub(matchPattern, replacePattern)) end)

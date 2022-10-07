@@ -1,4 +1,4 @@
-## Interface: 90200 #Fallback to the Mainline version
+## Interface: 100002 #Fallback to the Mainline version
 ## Title: Better UI Edit Mode
 ## Version: 1.0
 ## X-Day: 7

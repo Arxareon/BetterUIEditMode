@@ -513,7 +513,7 @@ local function CreateOptionsShortcuts(parentFrame)
 			offset = { x = -10, y = -30 }
 		},
 		width = 120,
-		onClick = function() InterfaceOptionsFrame_OpenToCategory(options.advancedOptionsPage) end,
+		onClick = function() Settings.OpenToCategory(GetID(options.advancedOptionsPage)) end,
 	})
 end
 local function CreateAboutInfo(parentFrame)
@@ -952,8 +952,8 @@ function SlashCmdList.PARTAR(line)
 	if command == strings.chat.help.command then
 		PrintCommands()
 	elseif command == strings.chat.options.command then
-		InterfaceOptionsFrame_OpenToCategory(options.mainOptionsPage)
-		InterfaceOptionsFrame_OpenToCategory(options.mainOptionsPage) --Load twice to make sure the proper page and category is loaded
+		Settings.OpenToCategory(GetID(options.mainOptionsPage))
+		-- Settings.OpenToCategory(GetID(options.mainOptionsPage)) --Load twice to make sure the proper page and category is loaded
 	elseif command == strings.chat.toggle.command then
 		ToggleCommand()
 	else
