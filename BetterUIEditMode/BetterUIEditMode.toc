@@ -1,0 +1,15 @@
+## Interface: 90200 #Fallback to the Mainline version
+## Title: Better UI Edit Mode
+## Version: 1.0
+## X-Day: 7
+## X-Month: 10
+## X-Year: 2022
+## Author: Barnabas Nagy (Arxareon)
+## X-License: All Rights Reserved
+## Notes: -
+## SavedVariables: BetterUIEditModeDB, PartyTargetsCS
+## SavedVariablesPerCharacter: BetterUIEditModeDBC
+
+WidgetTools/WidgetTools.lua
+BetterUIEditModeLocalizations.lua
+BetterUIEditMode.lua
