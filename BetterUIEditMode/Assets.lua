@@ -1,5 +1,10 @@
---Addon namespace
-local _, ns = ...
+--[[ ADDON INFO ]]
+
+--Addon namespace string & table
+local addonNameSpace, ns = ...
+
+--Addon root folder
+local root = "Interface/AddOns/" .. addonNameSpace .. "/"
 
 
 --[[ CHANGELOG ]]
@@ -11,6 +16,7 @@ local changelogDB = {
 	},
 }
 
+--Get an assembled & formatted string of the full changelog
 ns.GetChangelog = function()
 	--Colors
 	local version = "FFFFFFFF"
@@ -45,6 +51,9 @@ end
 --[[ LOCALIZATIONS ]]
 
 local english = {
+	temp = {
+		dfOpenSettings = "\nOpening subcategories is not yet supported in Dragonflight. Expand the #ADDON options on the left to navitage here manually." --# flags will be replaced with code, \n represents the newline character
+	},
 	options = {
 		name = "#ADDON options",
 		defaults = "The default options and the Custom preset have been reset.",
@@ -118,6 +127,64 @@ local english = {
 			},
 		},
 	},
+	extra = {
+		modify = {
+			tooltip = "Enable the special options for this frame: #FRAME", --# flags will be replaced with code, \n represents the newline character
+		},
+		defaults = {
+			label = "Defaults",
+			tooltip = "Restore the default options for this frame.",
+		},
+		move = {
+			tip = {
+				title = "Tip:",
+				description = "You can drag & drop the highlighted frame.",
+			},
+			anchor = {
+				label = "Anchor",
+				tooltip = "Select which point of the screen should the frame be anchored to.",
+			},
+			xOffset = {
+				label = "Horizontal Offset",
+				tooltip = "Set the amount of horizontal offset (X axis) of the frame from the selected anchor point.",
+			},
+			yOffset = {
+				label = "Vertical Offset",
+				tooltip = "Set the amount of vertical offset (Y axis) of the frame from the selected anchor point.",
+			},
+			relativeTo = {
+				label = "Link to Frame",
+				tooltip = "Type the name of another frame to link the position of this one to.\n\nFind out the names of frames by toggling the debug UI via /framestack.",
+			},
+			relativePoint = {
+				label = "Link at",
+				tooltip = "Attach the chosen anchor point of this frame to the selected link point of the frame specified for linking.",
+			},
+			movable = {
+				label = "Keep movable",
+				tooltip = "Keep the frame freely movable outside of Edit Mode.\n\nPlease note, that enabling this may cause some funny business in some cases (for example certain default mouseover functionality not working).",
+			},
+			modifier = {
+				label = "Move key: SHIFT",
+				tooltip = "Only allow moving the frame outside of Edit Mode while the SHIFT key is being pressed.",
+			},
+		},
+		mmb = {
+			dock = {
+				label = "Dock with the Status Tracking Bar",
+				tooltip = "Dock the Status Tracking Bar Manager (exp/rep or other progress bars) to the bottom of the screen, and link the position of the main Action Bar 1 frame to it. It will move up and down based on how many statuses are being tracked currently - how many bars are visible.",
+			},
+			extend = {
+				label = "Extend with another Action Bar",
+				tooltip = "Integrate a selected action bar into the Main Menu Bar (Action Bar 1) frame, extending its size to house up to 24 buttons, so you can build action bars more horizontally instead of stacking more vertically while keeping the bar art.",
+			},
+			scroll = {
+				label = "Move the page scroller to the right",
+				tooltip = "Uproot the action page number scroller and move it to the right side.",
+			},
+			notice = "Reload the interface to restore the default state of the action bar frames.",
+		}
+	},
 	chat = {
 		status = {
 			enabled = "#ADDON is enabled for this character.", --# flags will be replaced with code
@@ -144,21 +211,6 @@ local english = {
 	keys = {
 		shift = "SHIFT",
 		enter = "ENTER",
-	},
-	points = {
-		left = "Left",
-		right = "Right",
-		center = "Center",
-		top = {
-			left = "Top Left",
-			right = "Top Right",
-			center = "Top Center",
-		},
-		bottom = {
-			left = "Bottom Left",
-			right = "Bottom Right",
-			center = "Bottom Center",
-		},
 	},
 	misc = {
 		date = "#MONTH/#DAY/#YEAR", --# flags will be replaced with code
@@ -189,3 +241,22 @@ ns.LoadLocale = function()
 	end
 	return strings
 end
+
+
+--[[ ASSETS & RESOURCES ]]
+
+--Strings
+ns.strings = ns.LoadLocale()
+ns.strings.chat.keyword = "/bui"
+
+--Colors
+ns.colors = {
+	grey = { r = 0.7, g = 0.7, b = 0.7, a = 0.5 },
+	blue = { r = 0.7, g = 0.9, b = 1, a = 0.5 },
+	yellow = { r = 1, g = 0.9, b = 0.7, a = 0.5 },
+}
+
+--Textures
+ns.textures = {
+	logo = root .. "Textures/Logo.tga",
+}

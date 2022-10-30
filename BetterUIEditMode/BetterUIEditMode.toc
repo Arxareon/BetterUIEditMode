@@ -1,15 +1,16 @@
-## Interface: 100002 #Fallback to the Mainline version
+## Interface: 100000 #Fallback to the Mainline version
 ## Title: Better UI Edit Mode
 ## Version: 1.0
-## X-Day: 7
-## X-Month: 10
+## X-Day: 18
+## X-Month: 11
 ## X-Year: 2022
 ## Author: Barnabas Nagy (Arxareon)
 ## X-License: All Rights Reserved
-## Notes: -
-## SavedVariables: BetterUIEditModeDB, PartyTargetsCS
+## Notes: Verious improvements & additions to the base HUD UI Edit Mode.
+## SavedVariables: BetterUIEditModeDB, BetterUIEditModeCS
 ## SavedVariablesPerCharacter: BetterUIEditModeDBC
+## Dependencies: WidgetTools
 
-WidgetTools/WidgetTools.lua
-BetterUIEditModeLocalizations.lua
+Assets.lua
+WidgetToolbox.lua
 BetterUIEditMode.lua
