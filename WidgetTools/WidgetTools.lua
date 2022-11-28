@@ -3,6 +3,9 @@
 --Addon namespace string & table
 local addonNameSpace, ns = ...
 
+--Addon display name
+local _, addonTitle = GetAddOnInfo(addonNameSpace)
+
 
 --[[ WIDGET TOOLS DATA ]]
 
@@ -53,6 +56,9 @@ function frame:PLAYER_ENTERING_WORLD()
 	---@class WidgetToolbox
 	local wt = ns.WidgetToolbox
 
+	--Clean up the addon title
+	addonTitle = wt.Clear(addonTitle):gsub("^%s*(.-)%s*$", "%1")
+
 
 	--[[ SETTINGS CATEGORY PAGES ]]
 
@@ -73,11 +79,11 @@ function frame:PLAYER_ENTERING_WORLD()
 		name = "Addons",
 		appendOptions = false,
 		title = ns.strings.addons.title,
-		description = ns.strings.addons.description:gsub("#ADDON", addonNameSpace:gsub("(%u)", " %1"):sub(2)),
+		description = ns.strings.addons.description:gsub("#ADDON", addonTitle),
 		logo = ns.textures.logo,
 		scroll = {
 			height = 78,
-			speed = 98,
+			speed = 72,
 		},
 	})
 
@@ -91,7 +97,7 @@ function frame:PLAYER_ENTERING_WORLD()
 		parent = mainPage.canvas,
 		name = "Shortcuts",
 		title = ns.strings.shortcuts.title,
-		description = ns.strings.shortcuts.description:gsub("#ADDON", addonNameSpace:gsub("(%u)", " %1"):sub(2)),
+		description = ns.strings.shortcuts.description:gsub("#ADDON", addonTitle),
 		position = { offset = { x = 10, y = -82 } },
 		size = { height = 64 },
 	})
@@ -102,13 +108,13 @@ function frame:PLAYER_ENTERING_WORLD()
 		name = "AddonsPage",
 		title = ns.strings.addons.title,
 		tooltip = { lines = {
-			[0] = { text =  ns.strings.addons.description:gsub("#ADDON", addonNameSpace:gsub("(%u)", " %1"):sub(2)), },
-			[1] = { text = (wt.GetStrings("dfOpenSettings") or ""):gsub("#ADDON",  addonNameSpace:gsub("(%u)", " %1"):sub(2)), color = { r = 1, g = 0.24, b = 0.13 } }
+			[0] = { text =  ns.strings.addons.description:gsub("#ADDON", addonTitle), },
+			[1] = not wt.classic and { text = (wt.GetStrings("dfOpenSettings") or ""):gsub("#ADDON",  addonTitle), color = { r = 1, g = 0.24, b = 0.13 }, } or nil,
 		} },
 		position = { offset = { x = 10, y = -30 } },
-		size = { width = 120, },
+		size = { width = 160, },
 		events = { OnClick = function() addonsPage.open() end, },
-		disabled = true,
+		disabled = wt.classic == false,
 	})
 
 
@@ -119,13 +125,13 @@ function frame:PLAYER_ENTERING_WORLD()
 		parent = mainPage.canvas,
 		name = "About",
 		title = ns.strings.about.title,
-		description = ns.strings.about.description:gsub("#ADDON", addonNameSpace:gsub("(%u)", " %1"):sub(2)),
+		description = ns.strings.about.description:gsub("#ADDON", addonTitle),
 		position = {
 			relativeTo = shortcutsPanel,
 			relativePoint = "BOTTOMLEFT",
 			offset = { y = -32 }
 		},
-		size = { height = 231 },
+		size = { height = 257 },
 	})
 
 	--Text: Version
@@ -197,13 +203,13 @@ function frame:PLAYER_ENTERING_WORLD()
 		parent = aboutPanel,
 		name = "Changelog",
 		title = ns.strings.about.changelog.label,
-		tooltip = { lines = { [0] = { text = ns.strings.about.changelog.tooltip }, } },
+		tooltip = { lines = { [0] = { text = ns.strings.about.changelog.tooltip, }, } },
 		position = {
 			relativeTo = version,
 			relativePoint = "BOTTOMLEFT",
 			offset = { y = -12 }
 		},
-		size = { width = aboutPanel:GetWidth() - 32, height = 139 },
+		size = { width = aboutPanel:GetWidth() - 32, height = 165 },
 		text = ns.GetChangelog(),
 		font = "GameFontDisableSmall",
 		readOnly = true,
@@ -300,7 +306,7 @@ function frame:PLAYER_ENTERING_WORLD()
 		local toolboxPanel = wt.CreatePanel({
 			parent = addonsPage.scrollChild,
 			name = "Toolbox" .. key,
-			title = ns.strings.addons.toolbox:gsub("#VERSION", key),
+			title = ns.strings.addons.toolbox:gsub("#VERSION", ns.strings.about.version:gsub("#VERSION", WrapTextInColorCode(key, "FFFFFFFF"))),
 			position = {
 				anchor = "TOPLEFT",
 				relativeTo = previousToolbox,
@@ -438,7 +444,7 @@ function frame:PLAYER_ENTERING_WORLD()
 		parent = addonsPage.scrollChild,
 		name = "OldList",
 		title = ns.strings.addons.old.title,
-		description = ns.strings.addons.old.description:gsub("#ADDON", addonNameSpace:gsub("(%u)", " %1"):sub(2)),
+		description = ns.strings.addons.old.description:gsub("#ADDON", addonTitle),
 		position = {
 			relativeTo = previousToolbox,
 			relativePoint = "BOTTOMLEFT",
@@ -448,11 +454,11 @@ function frame:PLAYER_ENTERING_WORLD()
 	})
 
 	--Find old toolboxes
-	local oldToolboxesText = ns.strings.addons.old.none:gsub("#ADDON", addonNameSpace:gsub("(%u)", " %1"):sub(2))
+	local oldToolboxesText = ns.strings.addons.old.none:gsub("#ADDON", addonTitle)
 	if WidgetToolbox then if next(WidgetToolbox) then
 		local toolboxes = ""
 		for key, _ in wt.SortedPairs(WidgetToolbox) do toolboxes = toolboxes .. " • " .. key end
-		oldToolboxesText = WrapTextInColorCode(ns.strings.addons.old.inUse:gsub("#ADDON", addonNameSpace:gsub("(%u)", " %1"):sub(2)):gsub(
+		oldToolboxesText = WrapTextInColorCode(ns.strings.addons.old.inUse:gsub("#ADDON", addonTitle):gsub(
 				"#TOOLBOXES",  WrapTextInColorCode(toolboxes:sub(5),  "FFFFFFFF")
 			), wt.ColorToHex(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b, 1, true, false))
 	end end

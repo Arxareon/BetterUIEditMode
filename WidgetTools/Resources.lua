@@ -11,10 +11,11 @@ local root = "Interface/AddOns/" .. addonNameSpace .. "/"
 
 local changelogDB = {
 	[0] = {
-		[0] = "#V_Version 1.5_# #H_(10/26/2020)_#",
+		[0] = "#V_Version 1.5_# #H_(11/28/2020)_#",
 		[1] = "#H_Widget Tools has been supporting other addons in the background for over a year. Now, it has been separated into its own addon for more visibility, transparency and to offer wider development options._#",
         [2] = "#N_Update:_#",
-		[3] = "Added Dragonflight (10.0) support with backwards compatibility.",
+		[3] = "Added Dragonflight (Retail 10.0) support with backwards compatibility.",
+		[4] = "#H_If you encounter any issues, do not hesitate reporting them! Try including when & how they occur, and which other addons are you using to give me the best chance to be able to reproduce and fix them. If you know how, try proving taint logs as well if relevant. Thanks for helping!_#",
 	},
 }
 
@@ -104,7 +105,7 @@ local function LoadLocale()
 end
 
 
---[[ ASSETS & RESOURCES ]]
+--[[ ASSETS ]]
 
 --Strings
 ns.strings = LoadLocale()

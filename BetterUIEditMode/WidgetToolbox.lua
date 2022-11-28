@@ -23,7 +23,7 @@ if not next(ns.WidgetToolbox) then
 
 	local english = {
 		temp = {
-			dfOpenSettings = "\nOpening subcategories is not yet supported in Dragonflight. Expand the #ADDON options on the left to navitage here manually." --# flags will be replaced with code, \n represents the newline character
+			dfOpenSettings = "\nOpening subcategories is not yet supported in Dragonflight. Expand the #ADDON options on the left to navigate here manually." --# flags will be replaced with code, \n represents the newline character
 		},
 		reload = {
 			title = "Pending Changes",
@@ -552,15 +552,6 @@ if not next(ns.WidgetToolbox) then
 		return WrapTextInColorCode(text, wt.ColorToHex(r, g, b, a, true, false))
 	end
 
-	wt.EmbedTexture = function(t)
-	-- 	local 
-	-- 	local color = t.color and 
-	-- 	local params = ":" .. ((t.size or {}).height or 0)
-	-- 	params = params .. (t.size or {}).width and (":" .. t.size.width) or ""
-	-- 	params = params .. t.offset and (":" .. (t.offset).x) or ""
-		return "|T" .. t.path .. params .. "|t"
-	end
-
 	---Format a number string to include thousand separation
 	---@param value number Number value to turn into a string with thousand separation
 	---@param decimals? number Specify the number of decimal places to display if the number is a fractional value | ***Default:*** 0
@@ -827,6 +818,9 @@ if not next(ns.WidgetToolbox) then
 	--- - ***Note:*** All update rules are additive, calling ***WidgetToolbox*.SetBackdrop(...)** multiple times with **updates** specified *will not* override previously set update rules. The base **backdrop** values used for these old rules *will not* change by setting a new backdrop via ***WidgetToolbox*.SetBackdrop(...)** either!
 	wt.SetBackdrop = function(frame, backdrop, updates)
 		if not frame.SetBackdrop then return end
+
+		--[ Set Backdrop ]
+
 		--Set backdrop utility
 		local function setBackdrop(t)
 			--Remove the backdrop
@@ -834,6 +828,7 @@ if not next(ns.WidgetToolbox) then
 				frame:SetBackdrop(nil)
 				return
 			end
+
 			--Set the backdrop
 			t.background = t.background or {}
 			t.border = t.border or {}
@@ -856,28 +851,36 @@ if not next(ns.WidgetToolbox) then
 			if t.border.color then frame:SetBackdropBorderColor(wt.UnpackColor(t.border.color)) end
 		end
 
-		--Backdrop updates
+		--Set the base backdrop
+		setBackdrop(backdrop)
+
+		--[ Backdrop Updates ]
+
 		if updates then for key, value in pairs(updates) do
 			value.frame = value.frame or frame
 			if value.frame:HasScript(key) then value.frame:HookScript(key, function(self, ...)
-				--Restore the base backdrop on trigger
+				--Unconditional: Restore the base backdrop on trigger
 				if not value.rule then
 					setBackdrop(backdrop)
 					return
 				end
-				--Evaluate the rule
+
+				--Conditional: Evaluate the rule
 				local backdropUpdate, fillRule = value.rule(self, ...)
+
 				--Remove the backdrop
 				if type(backdropUpdate) ~= "table" then
 					setBackdrop(nil)
 					return
 				end
+
 				--Restore the base backdrop or do nothing on evaluation
 				if not next(backdropUpdate) then if fillRule then
 					setBackdrop(backdrop)
 					return
 				else return end end
-				--Update the backdrop
+
+				--Fill defaults
 				if fillRule then
 					--Fill backdrop update table with the base backdrop values
 					backdropUpdate = backdrop and wt.AddMissing(backdropUpdate, backdrop) or nil
@@ -893,6 +896,7 @@ if not next(ns.WidgetToolbox) then
 							insets = frame.backdropInfo.insets
 						})
 						backdropUpdate.background.color = backdropUpdate.background.color or wt.PackColor(frame:GetBackdropColor())
+
 						--Border
 						backdropUpdate.border = backdropUpdate.border or {}
 						backdropUpdate.border.texture = backdropUpdate.border.texture or wt.AddMissing(backdropUpdate.border.texture, {
@@ -902,12 +906,11 @@ if not next(ns.WidgetToolbox) then
 						backdropUpdate.border.color = backdropUpdate.border.color or wt.PackColor(frame:GetBackdropColor())
 					else backdropUpdate = nil end
 				end
+
+				--Update the backdrop
 				setBackdrop(backdropUpdate)
 			end) end
 		end end
-
-		--Set the base backdrop
-		setBackdrop(backdrop)
 	end
 
 	---Check all dependencies (disable / enable rules) of a frame
@@ -1164,7 +1167,7 @@ if not next(ns.WidgetToolbox) then
 	}
 
 	--Classic vs Dragonflight code separation
-	local classic = select(4, GetBuildInfo()) < 100000
+	wt.classic = select(4, GetBuildInfo()) < 100000
 
 
 	--[[ UX HELPERS ]]
@@ -1177,7 +1180,7 @@ if not next(ns.WidgetToolbox) then
 	wt.CreateGameTooltip = function(name)
 		local tooltip = CreateFrame("GameTooltip", name .. "GameTooltip", nil, "GameTooltipTemplate")
 
-		--Frame parameters
+		--Visibility
 		tooltip:SetFrameStrata("DIALOG")
 		tooltip:SetScale(0.9)
 
@@ -1190,103 +1193,138 @@ if not next(ns.WidgetToolbox) then
 
 	local customTooltip = wt.CreateGameTooltip("WidgetTools" .. toolboxVersion)
 
+	---Set up a show a GameTooltip for a frame to show or hide on hover
+	---@param t table Parameters are to be provided in this table
+	--- - **parent** Frame ― Owner frame the tooltip to be shown for
+	--- - **tooltip**? GameTooltip *optional* ― Reference to the tooltip frame to set up | ***Default:*** *default WidgetTools custom tooltip*
+	--- - **title** string ― String to be shown as the tooltip title (text color: NORMAL_FONT_COLOR (orange))
+	--- - **lines**? table *optional* ― Table containing text lines to be added to the tooltip [indexed, 0-based]
+	--- 	- **[*index*]** table ― Parameters of a line of text
+	--- 		- **text** string ― Text to be displayed in the line
+	--- 		- **font**? string|FontObject *optional* ― The FontObject to set for this line | ***Default:*** GameTooltipTextSmall
+	--- 		- **color**? table *optional* ― Table containing the RGB values to color this line with | ***Default:*** HIGHLIGHT_FONT_COLOR (white)
+	--- 			- **r** number ― Red | ***Range:*** (0, 1)
+	--- 			- **g** number ― Green | ***Range:*** (0, 1)
+	--- 			- **b** number ― Blue | ***Range:*** (0, 1)
+	--- 		- **wrap**? boolean *optional* ― Allow the text in this line to be wrapped | ***Default:*** true
+	--- - **flipColors**? boolean *optional* ― Flip the default color values of the title and the text lines | ***Default:*** false
+	--- - **anchor** TooltipAnchor ― [GameTooltip anchor](https://wowpedia.fandom.com/wiki/API_GameTooltip_SetOwner#Arguments)
+	--- - **offset**? table *optional* ― Values to offset the position of **tooltip** by
+	--- 	- **x**? number *optional* — ***Default:*** 0
+	--- 	- **y**? number *optional* — ***Default:*** 0
+	--- - **position**? table *optional* ― Parameters to call [Region:SetPoint(...)](https://wowpedia.fandom.com/wiki/API_ScriptRegionResizing_SetPoint) with when the tooltip is not automatically positioned via **t.anchor** | ***Default:*** "TOPLEFT" if **t.anchor** is set to "ANCHOR_NONE"
+	--- 	- **anchor**? [AnchorPoint](https://wowpedia.fandom.com/wiki/Anchors) *optional* — ***Default:*** "TOPLEFT"
+	--- 	- **relativeTo**? [Frame](https://wowpedia.fandom.com/wiki/API_CreateFrame#Frame_types) *optional*
+	--- 	- **relativePoint**? [AnchorPoint](https://wowpedia.fandom.com/wiki/Anchors) *optional*
+	--- 	- ***Note:*** **t.offset** will be used when calling [Region:SetPoint(...)](https://wowpedia.fandom.com/wiki/API_ScriptRegionResizing_SetPoint) as well.
+	--- - **triggers**? table *optional* ― List of additional frames to add hover events to to toggle **tooltip** for **parent** besides **parent** itself
+	--- 	- **[*value*]** Frame ― Reference to the frame to add the hover events to to toggle the visibility of **tooltip** | ***Default:*** **parent**
+	--- - **checkParent**? boolean *optional* ― Whether or not to check if **parent** is being hovered or not before hiding **tooltip** when triggers are stopped being hovered | ***Default:*** true
+	--- - **replace**? boolean *optional* ― If false, while **tooltip** is already visible for a different parent, don't change it | ***Default:*** true
+	--- 	- ***Note:*** If **tooltip** is already shown for **parent**, ***WidgetToolbox*.UpdateTooltip(...)** will be called anyway.
+	---@return GameTooltip tooltip ― Reference to the tooltip frame
+	wt.AddTooltip = function(t)
+		t.tooltip = t.tooltip or customTooltip
+
+		--Toggle events
+		t.triggers = t.triggers or {}
+		table.insert(t.triggers, t.parent)
+		for _, trigger in pairs(t.triggers) do
+			if trigger ~= t.parent and t.replace ~= false then
+				trigger:HookScript("OnEnter", function() if not t.tooltip:IsVisible() then
+					wt.UpdateTooltip({
+						parent = t.parent,
+						tooltip = t.tooltip,
+						title = t.title,
+						lines = t.lines,
+						flipColors = t.flipColors,
+						anchor = t.anchor,
+						offset = t.offset,
+						position = t.position
+					})
+					t.tooltip:Show()
+				end end)
+			else
+				trigger:HookScript("OnEnter", function()
+					wt.UpdateTooltip({
+						parent = t.parent,
+						tooltip = t.tooltip,
+						title = t.title,
+						lines = t.lines,
+						flipColors = t.flipColors,
+						anchor = t.anchor,
+						offset = t.offset,
+						position = t.position
+					})
+					t.tooltip:Show()
+				end)
+			end
+			if trigger ~= t.parent and t.checkParent then
+				trigger:HookScript("OnLeave", function() if not t.parent:IsMouseOver() then t.tooltip:Hide() end end)
+			else
+				trigger:HookScript("OnLeave", function() t.tooltip:Hide() end)
+			end
+		end
+
+		return t.tooltip
+	end
+
 	---Update an already visible GameTooltip
-	---@param tooltip GameTooltip Reference to the tooltip frame to set up
-	---@param parent Frame Owner frame the tooltip to be shown for
-	---@param title string String to be shown as the tooltip title (text color: NORMAL_FONT_COLOR (orange))
-	---@param textLines? table Table containing text lines to be added to the tooltip [indexed, 0-based]
-	--- - **[*index*]** table ― Parameters of a line of text
-	--- 	- **text** string ― Text to be displayed in the line
-	--- 	- **font**? string|FontObject *optional* ― The FontObject to set for this line | ***Default:*** GameTooltipTextSmall
-	--- 	- **color**? table *optional* ― Table containing the RGB values to color this line with | ***Default:*** HIGHLIGHT_FONT_COLOR (white)
-	--- 		- **r** number ― Red | ***Range:*** (0, 1)
-	--- 		- **g** number ― Green | ***Range:*** (0, 1)
-	--- 		- **b** number ― Blue | ***Range:*** (0, 1)
-	--- 	- **wrap**? boolean *optional* ― Allow the text in this line to be wrapped | ***Default:*** true
-	---@param anchor TooltipAnchor [GameTooltip anchor](https://wowpedia.fandom.com/wiki/API_GameTooltip_SetOwner#Arguments)
-	---@param offset? table Values to offset the position of **tooltip** by
-	--- - **x**? number *optional* — ***Default:*** 0
-	--- - **y**? number *optional* — ***Default:*** 0
-	---@param flipColors? boolean Flip the default color values of the title and the text lines | ***Default:*** false
+	---@param t table Parameters are to be provided in this table
+	--- - **parent** Frame ― Owner frame the tooltip to be shown for
+	--- - **tooltip**? GameTooltip *optional* ― Reference to the tooltip frame to set up | ***Default:*** *default WidgetTools custom tooltip*
+	--- - **title** string ― String to be shown as the tooltip title (text color: NORMAL_FONT_COLOR (orange))
+	--- - **lines**? table *optional* ― Table containing text lines to be added to the tooltip [indexed, 0-based]
+	--- 	- **[*index*]** table ― Parameters of a line of text
+	--- 		- **text** string ― Text to be displayed in the line
+	--- 		- **font**? string|FontObject *optional* ― The FontObject to set for this line | ***Default:*** GameTooltipTextSmall
+	--- 		- **color**? table *optional* ― Table containing the RGB values to color this line with | ***Default:*** HIGHLIGHT_FONT_COLOR (white)
+	--- 			- **r** number ― Red | ***Range:*** (0, 1)
+	--- 			- **g** number ― Green | ***Range:*** (0, 1)
+	--- 			- **b** number ― Blue | ***Range:*** (0, 1)
+	--- 		- **wrap**? boolean *optional* ― Allow the text in this line to be wrapped | ***Default:*** true
+	--- - **flipColors**? boolean *optional* ― Flip the default color values of the title and the text lines | ***Default:*** false
+	--- - **anchor** TooltipAnchor ― [GameTooltip anchor](https://wowpedia.fandom.com/wiki/API_GameTooltip_SetOwner#Arguments)
+	--- - **offset**? table *optional* ― Values to offset the position of **tooltip** by
+	--- 	- **x**? number *optional* — ***Default:*** 0
+	--- 	- **y**? number *optional* — ***Default:*** 0
+	--- - **position**? table *optional* ― Parameters to call [Region:SetPoint(...)](https://wowpedia.fandom.com/wiki/API_ScriptRegionResizing_SetPoint) with when the tooltip is not automatically positioned via **t.anchor** | ***Default:*** "TOPLEFT" if **t.anchor** is set to "ANCHOR_NONE"
+	--- 	- **anchor**? [AnchorPoint](https://wowpedia.fandom.com/wiki/Anchors) *optional* — ***Default:*** "TOPLEFT"
+	--- 	- **relativeTo**? [Frame](https://wowpedia.fandom.com/wiki/API_CreateFrame#Frame_types) *optional*
+	--- 	- **relativePoint**? [AnchorPoint](https://wowpedia.fandom.com/wiki/Anchors) *optional*
+	--- 	- ***Note:*** **t.offset** will be used when calling [Region:SetPoint(...)](https://wowpedia.fandom.com/wiki/API_ScriptRegionResizing_SetPoint) as well.
 	---@return GameTooltip tooltip Reference to the tooltip frame
-	wt.UpdateTooltip = function(tooltip, parent, title, textLines, anchor, offset, flipColors)
+	wt.UpdateTooltip = function(t)
 		--Position
-		tooltip:SetOwner(parent, anchor, (offset or {}).x, (offset or {}).y)
+		if t.anchor == "ANCHOR_NONE" then
+			t.tooltip:SetOwner(t.parent, t.anchor)
+			t.position = t.position or {}
+			t.position.offset = t.offset
+			wt.SetPosition(t.tooltip, t.position)
+		else t.tooltip:SetOwner(t.parent, t.anchor, (t.offset or {}).x or 0, (t.offset or {}).y or 0) end
 
 		--Title
-		local titleColor = flipColors and colors.highlight or colors.normal
-		tooltip:AddLine(title, titleColor.r, titleColor.g, titleColor.b, true)
+		local titleColor = t.flipColors and colors.highlight or colors.normal
+		t.tooltip:AddLine(t.title, titleColor.r, titleColor.g, titleColor.b, true)
 
-		--Text
-		if textLines then
-			for i = 0, #textLines do
+		--Text lines
+		if t.lines then
+			for i = 0, #t.lines do
 				--Set FontString
-				local left = tooltip:GetName() .. "TextLeft" .. i + 2
-				local right = tooltip:GetName() .. "TextRight" .. i + 2
-				local font = textLines[i].font or "GameTooltipTextSmall"
-				if not _G[left] or not _G[right] then tooltip:AddFontStrings(tooltip:CreateFontString(left, nil, font), tooltip:CreateFontString(right, nil, font)) end
+				local left = t.tooltip:GetName() .. "TextLeft" .. i + 2
+				local right = t.tooltip:GetName() .. "TextRight" .. i + 2
+				local font = t.lines[i].font or "GameTooltipTextSmall"
+				if not _G[left] or not _G[right] then t.tooltip:AddFontStrings(t.tooltip:CreateFontString(left, nil, font), t.tooltip:CreateFontString(right, nil, font)) end
 				_G[left]:SetFontObject(font)
 				_G[left]:SetJustifyH("LEFT")
 				_G[right]:SetFontObject(font)
 				_G[right]:SetJustifyH("RIGHT")
-				local color = textLines[i].color or (flipColors and colors.normal or colors.highlight)
-				tooltip:AddLine(textLines[i].text, color.r, color.g, color.b, textLines[i].wrap ~= false)
+				local color = t.lines[i].color or (t.flipColors and colors.normal or colors.highlight)
+				t.tooltip:AddLine(t.lines[i].text, color.r, color.g, color.b, t.lines[i].wrap ~= false)
 			end
 		end
 
-		return tooltip
-	end
-
-	---Set up a show a GameTooltip for a frame to show or hide on hover
-	---@param parent Frame Owner frame the tooltip to be shown for
-	---@param title string String to be shown as the tooltip title
-	---@param textLines? table Table containing text lines to be added to the tooltip [indexed, 0-based]
-	--- - **[*index*]** table ― Parameters of a line of text
-	--- 	- **text** string ― Text to be displayed in the line
-	--- 	- **font**? string|FontObject *optional* ― The FontObject to set for this line | ***Default:*** GameTooltipTextSmall
-	--- 	- **color**? table *optional* ― Table containing the RGB values to color this line with | ***Default:*** HIGHLIGHT_FONT_COLOR (white)
-	--- 		- **r** number ― Red | ***Range:*** (0, 1)
-	--- 		- **g** number ― Green | ***Range:*** (0, 1)
-	--- 		- **b** number ― Blue | ***Range:*** (0, 1)
-	--- 	- **wrap**? boolean *optional* ― Allow the text in this line to be wrapped | ***Default:*** true
-	---@param anchor TooltipAnchor [GameTooltip anchor](https://wowpedia.fandom.com/wiki/API_GameTooltip_SetOwner#Arguments)
-	---@param offset? table Values to offset the position of **tooltip** by
-	--- - **x**? number *optional* — ***Default:*** 0
-	--- - **y**? number *optional* — ***Default:*** 0
-	---@param triggers? table List of additional frames to add hover events to to toggle **tooltip** for **parent** besides **parent** itself
-	--- - **[*value*]** Frame ― Reference to the frame to add the hover events to to toggle the visibility of **tooltip** | ***Default:*** **parent**
-	---@param checkParent? boolean Whether or not to check if **parent** is being hovered or not before hiding **tooltip** when triggers are stopped being hovered | ***Default:*** true
-	---@param tooltip? GameTooltip Reference to the tooltip frame to set up | ***Default:*** *default WidgetTools custom tooltip*
-	---@param replace? boolean If false, while **tooltip** is already visible for a different parent, don't change it | ***Default:*** true
-	--- - ***Note:*** If **tooltip** is already shown for **parent**, ***WidgetToolbox*.UpdateTooltip(...)** will be called anyway.
-	---@param flipColors? boolean Flip the default color values of the title and the text lines | ***Default:*** false
-	---@return GameTooltip tooltip Reference to the tooltip frame
-	wt.AddTooltip = function(parent, title, textLines, anchor, offset, triggers, checkParent, tooltip, replace, flipColors)
-		tooltip = tooltip or customTooltip
-
-		--Toggle events
-		triggers = triggers or {}
-		table.insert(triggers, parent)
-		for _, trigger in pairs(triggers) do
-			if trigger ~= parent and replace ~= false then
-				trigger:HookScript("OnEnter", function() if not tooltip:IsVisible() then
-					wt.UpdateTooltip(tooltip, parent, title, textLines, anchor, offset, flipColors)
-					tooltip:Show()
-				end end)
-			else
-				trigger:HookScript("OnEnter", function()
-					wt.UpdateTooltip(tooltip, parent, title, textLines, anchor, offset, flipColors)
-					tooltip:Show()
-				end)
-			end
-			if trigger ~= parent and checkParent then
-				trigger:HookScript("OnLeave", function() if not parent:IsMouseOver() then tooltip:Hide() end end)
-			else
-				trigger:HookScript("OnLeave", function() tooltip:Hide() end)
-			end
-		end
-
-		return tooltip
+		return t.tooltip
 	end
 
 	--[ Popup Dialogue Box ]
@@ -1574,6 +1612,7 @@ if not next(ns.WidgetToolbox) then
 	--- 	- ***Note - File format:*** Texture files must be in JPEG (no transparency, not recommended), PNG, TGA or BLP format
 	--- 	- ***Note - Size:*** Texture files must have powers of 2 dimensions to be handled by the WoW client
 	--- - **layer**? [Layer](https://wowpedia.fandom.com/wiki/Layer) *optional*
+	--- - **level**? integer *optional* — Sublevel to set within the draw layer specified with **t.layer** | ***Range:*** (-8, 7)
 	--- - **tile**? boolean *optional* — Repeat the texture horizontally and vertically | ***Default:*** false
 	--- - **flip**? table *optional*
 	--- 	- **horizontal**? boolean *optional* — Mirror the entire texture on the horizontal axis | ***Default:*** false
@@ -1622,13 +1661,14 @@ if not next(ns.WidgetToolbox) then
 			--Position & dimensions
 			wt.SetPosition(texture, data.position)
 			texture:SetSize(data.size.width, data.size.height)
+
 			--Asset & color
 			texture:SetTexture(data.path, data.tile, data.tile)
 			if data.tile then
 				texture:SetHorizTile("REPEAT")
 				texture:SetVertTile("REPEAT")
 			end
-			if data.layer then texture:SetDrawLayer(data.layer) end
+			if data.layer then if data.level then texture:SetDrawLayer(data.layer, data.level) else texture:SetDrawLayer(data.layer) end end
 			if data.flip then texture:SetTexCoord(t.flip.horizontal and 1 or 0, t.flip.horizontal and 0 or 1, t.flip.vertical and 1 or 0, t.flip.vertical and 0 or 1) end
 			if data.color then texture:SetVertexColor(wt.UnpackColor(data.color)) end
 		end
@@ -1642,13 +1682,15 @@ if not next(ns.WidgetToolbox) then
 			value.frame = value.frame or t.parent
 			--Set the script
 			if value.frame:HasScript(key) then value.frame:HookScript(key, function(self, ...)
-				--Restore the base backdrop on trigger
+				--Unconditional: Restore the base backdrop on trigger
 				if not value.rule then
 					setTexture(t)
 					return
 				end
-				--Evaluate the rule & fill texture update date with the base values
+
+				--Conditional: Evaluate the rule & fill texture update date with the base values
 				local data = wt.AddMissing(value.rule(self, ...), t)
+
 				--Update the texture
 				setTexture(data)
 			end) end
@@ -1808,7 +1850,7 @@ if not next(ns.WidgetToolbox) then
 
 		--Position & dimensions
 		scrollBarBG:SetPoint("TOPLEFT", _G[name .. "ScrollBar"], "TOPLEFT", -1, -3)
-		scrollBarBG:SetSize(_G[name .. "ScrollBar"]:GetWidth() + 1,  t.parent:GetHeight() - 53)
+		scrollBarBG:SetSize(_G[name .. "ScrollBar"]:GetWidth() + 1,  t.parent:GetHeight() - 60)
 
 		--Backdrop
 		wt.SetBackdrop(scrollBarBG, {
@@ -1827,8 +1869,8 @@ if not next(ns.WidgetToolbox) then
 
 		--[ Scroll Child Frame ]
 
-		--Create scrollabel child frame
-		local scrollChild = CreateFrame("Frame", t.parent:GetName() .. (t.scrollName and t.scrollName:gsub("%s+", "") or "SrollChild"), scrollFrame)
+		--Create scrollable child frame
+		local scrollChild = CreateFrame("Frame", t.parent:GetName() .. (t.scrollName and t.scrollName:gsub("%s+", "") or "ScrollChild"), scrollFrame)
 
 		--Position & dimensions
 		scrollChild:SetPoint("TOPLEFT")
@@ -1895,6 +1937,9 @@ if not next(ns.WidgetToolbox) then
 
 		--Create the context menu frame
 		local contextMenu = CreateFrame("Frame", name, t.parent, BackdropTemplateMixin and "BackdropTemplate")
+
+		--Visibility
+		contextMenu:SetFrameStrata("DIALOG")
 
 		--Position & dimensions
 		contextMenu:SetClampedToScreen(true)
@@ -2074,7 +2119,14 @@ if not next(ns.WidgetToolbox) then
 			hoverTarget:SetSize(toggle:GetSize())
 			hoverTarget:Hide()
 			--Set the tooltip
-			wt.AddTooltip(toggle, t.tooltip.title or title, t.tooltip.lines, "ANCHOR_TOPLEFT", { x = 20, }, { hoverTarget, })
+			wt.AddTooltip({
+				parent = toggle,
+				title = t.tooltip.title or title,
+				lines = t.tooltip.lines,
+				anchor = "ANCHOR_TOPLEFT",
+				offset = { x = 20, },
+				triggers = { hoverTarget, },
+			})
 		end
 
 		--[ Flyout Menu ]
@@ -2084,6 +2136,10 @@ if not next(ns.WidgetToolbox) then
 
 		--Add to the context menu
 		table.insert((mainContextMenu or contextMenu).submenus, submenu)
+
+		--Visibility
+		submenu:SetFrameStrata("DIALOG")
+		submenu:SetFrameLevel(contextMenu:GetFrameLevel() + 1)
 
 		--Position & dimensions
 		submenu:SetClampedToScreen(true)
@@ -2185,8 +2241,8 @@ if not next(ns.WidgetToolbox) then
 	--- 	- **speed**? number *optional* — Set the scroll rate to the specified value | ***Default:*** *half of the height of the scroll bar*
 	--- - **save**? function *optional* — The function to be called when the settings are getting saved by the user
 	--- - **load**? function *optional* — The function to be called when the settings panel is loaded
-	--- - **cancel**? function *optional* — The function to be called when the changes are getting scrapped by the user
-	--- - **default**? function *optional* — The function to be called when either the "All Settings" or "These Settings" (***Options Category Panel-specific***) button is clicked from the "Defaults" dialogue (**t.refresh** will be called automatically afterwards)
+	--- - **cancel**? function *optional* — The function to be called when the changes are getting scrapped by the user before the widgets are updated
+	--- - **default**? function *optional* — The function to be called when either the "All Settings" or "These Settings" (***Options Category Panel-specific***) button is clicked from the "Defaults" dialogue before the widgets are updated
 	--- - **optionsKey**? table ―  A unique key referencing the collection of widget options data to be saved & loaded with this options category page
 	--- - **autoSave**? boolean *optional* — If true, automatically save all data on commit from the storage tables to the widgets described in the collection of options data referenced by **t.optionsKey** | ***Default:*** true if **t.optionsKey** is set
 	--- 	- ***Note:*** If **t.optionsKey** is not set, the automatic save will not be executed even if **t.autoSave** is true.
@@ -2203,7 +2259,7 @@ if not next(ns.WidgetToolbox) then
 	--- - **default** function — Call to reset all options in this category page to their default values (calls **t.default** along with **load** & **t.load** as well)
 	wt.CreateOptionsCategory = function(t)
 		local name = (t.append ~= false and t.addon or "") .. (t.name and t.name:gsub("%s+", "") or t.addon)
-		local title = t.title or wt.Clear(GetAddOnMetadata(t.addon, "title"))
+		local title = t.title or wt.Clear(GetAddOnMetadata(t.addon, "title")):gsub("^%s*(.-)%s*$", "%1")
 		local optionsPage = {}
 
 		--[ Options Data Management Utilities ]
@@ -2217,18 +2273,18 @@ if not next(ns.WidgetToolbox) then
 			if t.load then t.load() end
 		end
 		optionsPage.cancel = function()
-			if t.optionsKey then wt.LoadOptionsData(t.optionsKey) end
 			if t.cancel then t.cancel() end
+			if t.optionsKey then wt.LoadOptionsData(t.optionsKey) end
 		end
 		optionsPage.default = function()
-			if t.optionsKey then wt.LoadOptionsData(t.optionsKey) end
 			if t.default then t.default() end
+			if t.optionsKey then wt.LoadOptionsData(t.optionsKey) end
 		end
 
 		--[ Options Page Setup ]
 
 		--Create the options page
-		if classic then
+		if wt.classic then
 			--Create the options canvas frame
 			optionsPage.canvas = CreateFrame("Frame", name .. (t.appendOptions ~= false and "Options" or ""), InterfaceOptionsFramePanelContainer)
 
@@ -2359,7 +2415,7 @@ if not next(ns.WidgetToolbox) then
 			optionsPage.scrollChild = wt.CreateScrollFrame({
 				parent = optionsPage.canvas,
 				position = { offset = { x = 0, y = -4 } },
-				size = { width = optionsPage.canvas:GetWidth() - 4, height = optionsPage.canvas:GetHeight() - (classic and 8 or 16) },
+				size = { width = optionsPage.canvas:GetWidth() - 4, height = optionsPage.canvas:GetHeight() - (wt.classic and 8 or 16) },
 				scrollSize = { width = optionsPage.canvas:GetWidth() - 20, height = t.scroll.height, },
 				scrollSpeed = t.scroll.speed
 			})
@@ -2379,7 +2435,7 @@ if not next(ns.WidgetToolbox) then
 
 		--[ Open Utility ]
 
-		optionsPage.open = classic and function()
+		optionsPage.open = wt.classic and function()
 			InterfaceOptionsFrame_OpenToCategory(optionsPage.category)
 			InterfaceOptionsFrame_OpenToCategory(optionsPage.category) --Load twice to make sure the proper page and category is loaded
 		end or function() Settings.OpenToCategory(optionsPage.category:GetID()) end --FIXME: Add support whenever they add opening to subcategories
@@ -2490,8 +2546,16 @@ if not next(ns.WidgetToolbox) then
 			hoverTarget:SetPoint("TOPLEFT")
 			hoverTarget:SetSize(button:GetSize())
 			hoverTarget:Hide()
+
 			--Set the tooltip
-			wt.AddTooltip(button, t.tooltip.title or title, t.tooltip.lines, "ANCHOR_TOPLEFT", { x = 20, }, { hoverTarget, })
+			wt.AddTooltip({
+				parent = button,
+				title = t.tooltip.title or title,
+				lines = t.tooltip.lines,
+				anchor = "ANCHOR_TOPLEFT",
+				offset = { x = 20, },
+				triggers = { hoverTarget, },
+			})
 		end
 
 		--[ Getters & Setters ]
@@ -2627,8 +2691,16 @@ if not next(ns.WidgetToolbox) then
 			hoverTarget:SetPoint("TOPLEFT")
 			hoverTarget:SetSize(button:GetSize())
 			hoverTarget:Hide()
+
 			--Set the tooltip
-			wt.AddTooltip(button, t.tooltip.title or title, t.tooltip.lines, "ANCHOR_TOPLEFT", { x = 20, }, { hoverTarget, })
+			wt.AddTooltip({
+				parent = button,
+				title = t.tooltip.title or title,
+				lines = t.tooltip.lines,
+				anchor = "ANCHOR_TOPLEFT",
+				offset = { x = 20, },
+				triggers = { hoverTarget, },
+			})
 		end
 
 		--[ Getters & Setters ]
@@ -2769,7 +2841,12 @@ if not next(ns.WidgetToolbox) then
 		checkbox:HookScript("OnClick", function(self) PlaySound(self:GetChecked() and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF) end)
 
 		--Tooltip
-		if t.tooltip then wt.AddTooltip(checkbox, t.tooltip.title or title, t.tooltip.lines, "ANCHOR_RIGHT") end
+		if t.tooltip then wt.AddTooltip({
+			parent = checkbox,
+			title = t.tooltip.title or title,
+			lines = t.tooltip.lines,
+			anchor = "ANCHOR_RIGHT",
+		}) end
 
 		--[ Getters & Setters ]
 
@@ -2917,7 +2994,13 @@ if not next(ns.WidgetToolbox) then
 		end end) end
 
 		--Tooltip
-		if t.tooltip then wt.AddTooltip(radioButton, t.tooltip.title or title, t.tooltip.lines, "ANCHOR_RIGHT", nil, { extension, }) end
+		if t.tooltip then wt.AddTooltip({
+			parent = radioButton,
+			title = t.tooltip.title or title,
+			lines = t.tooltip.lines,
+			anchor = "ANCHOR_RIGHT",
+			triggers = { extension, },
+		}) end
 
 		--[ Getters & Setters ]
 
@@ -3107,7 +3190,12 @@ if not next(ns.WidgetToolbox) then
 		--[ Events & Behavior ]
 
 		--Tooltip
-		if t.tooltip then wt.AddTooltip(selector, t.tooltip.title or title, t.tooltip.lines, "ANCHOR_RIGHT") end
+		if t.tooltip then wt.AddTooltip({
+			parent = selector,
+			title = t.tooltip.title or title,
+			lines = t.tooltip.lines,
+			anchor = "ANCHOR_RIGHT",
+		}) end
 
 		--[ Getters & Setters ]
 
@@ -3555,6 +3643,7 @@ if not next(ns.WidgetToolbox) then
 			keepInBound = true,
 			size = { width = dropdown:GetWidth(), height = 28 + #t.items * 16 }
 		})
+		panel:SetFrameStrata("DIALOG")
 		panel:SetBackdropColor(0.06, 0.06, 0.06, 0.9)
 		panel:SetBackdropBorderColor(0.42, 0.42, 0.42, 0.9)
 
@@ -3589,7 +3678,7 @@ if not next(ns.WidgetToolbox) then
 			dropdown.previous = wt.CreateButton({
 				parent = dropdown,
 				name = "SelectPrevious",
-				title = "|T" .. textures.arrowhead .. ":8:8:0:0:8:8:8:0:8:0|t",
+				title = "|T" .. textures.arrowhead .. ":8:8:0:0:8:8:8:0:0:8|t",
 				position = { anchor = "BOTTOMLEFT", },
 				size = { width = 22 },
 				customizable = true,
@@ -3599,9 +3688,9 @@ if not next(ns.WidgetToolbox) then
 						local selected = dropdown.getSelected()
 						dropdown.setSelected(selected and selected - 1 or 0, nil, true)
 					end,
-					OnEnable = function(self) _G[self:GetName() .. "Text"]:SetText("|T" .. textures.arrowhead .. ":8:8:0:0:8:8:8:0:8:0|t") end,
+					OnEnable = function(self) _G[self:GetName() .. "Text"]:SetText("|T" .. textures.arrowhead .. ":8:8:0:0:8:8:8:0:0:8|t") end,
 					OnDisable = function(self) _G[self:GetName() .. "Text"]:SetText(
-						"|T" .. textures.arrowhead .. ":8:8:0:0:8:8:8:0:8:0" .. colors.disabled.r .. ":" .. colors.disabled.g .. ":" .. colors.disabled.b .. "|t"
+						"|T" .. textures.arrowhead .. ":8:8:0:0:8:8:8:0:0:8:" .. colors.disabled.r * 255 .. ":" .. colors.disabled.g * 255 .. ":" .. colors.disabled.b * 255 .. "|t"
 					) end,
 				},
 				dependencies = { [0] = { frame = dropdown.selector, evaluate = function(value)
@@ -3666,7 +3755,7 @@ if not next(ns.WidgetToolbox) then
 					end,
 					OnEnable = function(self) _G[self:GetName() .. "Text"]:SetText("|T" .. textures.arrowhead .. ":8:8|t") end,
 					OnDisable = function(self) _G[self:GetName() .. "Text"]:SetText(
-						"|T" .. textures.arrowhead .. ":8:8:0:0:8:8:0:8:0:8" .. colors.disabled.r .. ":" .. colors.disabled.g .. ":" .. colors.disabled.b .. "|t"
+						"|T" .. textures.arrowhead .. ":8:8:0:0:8:8:0:8:0:8:" .. colors.disabled.r * 255 .. ":" .. colors.disabled.g * 255 .. ":" .. colors.disabled.b * 255 .. "|t"
 					) end,
 				},
 				dependencies = { [0] = { frame = dropdown.selector, evaluate = function(value)
@@ -3730,11 +3819,11 @@ if not next(ns.WidgetToolbox) then
 			dropdown.toggle.setEnabled(state)
 			dropdown.selector.setEnabled(state)
 			if t.sideButtons ~= false then
-				dropdown.previous.setEnabled(wt.CheckDependencies({ [0] = { frame = dropdown.selector, evaluate = function(value)
+				dropdown.previous.setEnabled(state and wt.CheckDependencies({ [0] = { frame = dropdown.selector, evaluate = function(value)
 						if not value then return false end
 						return value > 0
 					end }, }))
-				dropdown.next.setEnabled(wt.CheckDependencies({ [0] = { frame = dropdown.selector, evaluate = function(value)
+				dropdown.next.setEnabled(state and wt.CheckDependencies({ [0] = { frame = dropdown.selector, evaluate = function(value)
 					if not value then return false end
 					return value < #dropdown.selector.items
 				end }, }))
@@ -3779,7 +3868,12 @@ if not next(ns.WidgetToolbox) then
 		end)
 
 		--Tooltip
-		if t.tooltip then wt.AddTooltip(dropdown, t.tooltip.title or title, t.tooltip.lines, "ANCHOR_RIGHT") end
+		if t.tooltip then wt.AddTooltip({
+			parent = dropdown,
+			title = t.tooltip.title or title,
+			lines = t.tooltip.lines,
+			anchor = "ANCHOR_RIGHT",
+		}) end
 
 		--[ Options Data ]
 
@@ -3904,7 +3998,7 @@ if not next(ns.WidgetToolbox) then
 	--- 			end)
 	--- 			```
 	wt.CreateClassicDropdown = function(t)
-		if not classic then return wt.CreateDropdown(t) end
+		if not wt.classic then return wt.CreateDropdown(t) end
 		--Create the dropdown frame
 		local name = (t.append ~= false and t.parent:GetName() or "") .. (t.name and t.name:gsub("%s+", "") or "Dropdown")
 		local dropdown = CreateFrame("Frame", name, t.parent, "UIDropDownMenuTemplate")
@@ -3938,7 +4032,12 @@ if not next(ns.WidgetToolbox) then
 			} or nil,
 		})
 		--Tooltip
-		if t.tooltip then wt.AddTooltip(dropdown, t.tooltip.title or title, t.tooltip.lines, "ANCHOR_RIGHT") end
+		if t.tooltip then wt.AddTooltip({
+			parent = dropdown,
+			title = t.tooltip.title or title,
+			lines = t.tooltip.lines,
+			anchor = "ANCHOR_RIGHT",
+		}) end
 		--Getters & setters
 		dropdown.getUniqueType = function() return "Dropdown" end
 		dropdown.isUniqueType = function(type) return type == "Dropdown" end
@@ -4275,7 +4374,12 @@ if not next(ns.WidgetToolbox) then
 		end
 
 		--Tooltip
-		if t.tooltip then wt.AddTooltip(editBox, t.tooltip.title or title, t.tooltip.lines, "ANCHOR_RIGHT") end
+		if t.tooltip then wt.AddTooltip({
+			parent = editBox,
+			title = t.tooltip.title or title,
+			lines = t.tooltip.lines,
+			anchor = "ANCHOR_RIGHT",
+		}) end
 
 		return editBox
 	end
@@ -4401,7 +4505,7 @@ if not next(ns.WidgetToolbox) then
 		--[ Frame Setup ]
 
 		--Create the edit scroll frame
-		local scrollFrame = CreateFrame("ScrollFrame", name, t.parent, classic and "InputScrollFrameTemplate" or "WidgetToolsInputScrollFrameTemplate") --BUG: Revert to using the default template when SetMaxLetters gets fixed
+		local scrollFrame = CreateFrame("ScrollFrame", name, t.parent, wt.classic and "InputScrollFrameTemplate" or "WidgetToolsInputScrollFrameTemplate") --BUG: Revert to using the default template when SetMaxLetters gets fixed
 
 		--Position & dimensions
 		t.position.offset = t.position.offset or {}
@@ -4443,7 +4547,7 @@ if not next(ns.WidgetToolbox) then
 			dependencies = t.dependencies,
 			optionsData = t.optionsData
 		})
-		if not classic then scrollFrame.EditBox.cursorOffset = 0 end --FIXME: Remove when the character counter gets fixed
+		if not wt.classic then scrollFrame.EditBox.cursorOffset = 0 end --FIXME: Remove when the character counter gets fixed
 
 		--[ Size Update Utility ]
 
@@ -4462,7 +4566,7 @@ if not next(ns.WidgetToolbox) then
 
 		--[ Events & Behavior ]
 
-		--Cusrom behavior
+		--Custom behavior
 		t.scrollToTop = t.scrollToTop ~= false or nil
 		scrollFrame.EditBox:HookScript("OnTextChanged", function()
 			resizeEditBox()
@@ -4479,7 +4583,13 @@ if not next(ns.WidgetToolbox) then
 		end)
 
 		--Tooltip
-		if t.tooltip then wt.AddTooltip(scrollFrame, t.tooltip.title or title, t.tooltip.lines, "ANCHOR_RIGHT", nil, { scrollFrame.EditBox }) end
+		if t.tooltip then wt.AddTooltip({
+			parent = scrollFrame,
+			title = t.tooltip.title or title,
+			lines = t.tooltip.lines,
+			anchor = "ANCHOR_RIGHT",
+			triggers = { scrollFrame.EditBox },
+		}) end
 
 		return scrollFrame.EditBox, scrollFrame
 	end
@@ -4570,7 +4680,7 @@ if not next(ns.WidgetToolbox) then
 			name = "CopyText",
 			title = strings.copy.editbox.label,
 			label = false,
-			tooltip = { lines = { [0] = { text = strings.copy.editbox.tooltip }, } },
+			tooltip = { lines = { [0] = { text = strings.copy.editbox.tooltip, }, } },
 			position = { anchor = "LEFT", },
 			size = t.size,
 			font = copyBox.textLine:GetFontObject(),
@@ -4608,7 +4718,12 @@ if not next(ns.WidgetToolbox) then
 		end
 
 		--Tooltip
-		wt.AddTooltip(copyBox, strings.copy.textline.label, { [0] = { text = strings.copy.textline.tooltip }, }, "ANCHOR_RIGHT")
+		wt.AddTooltip({
+			parent = copyBox,
+			title = strings.copy.textline.label,
+			lines = { [0] = { text = strings.copy.textline.tooltip, }, },
+			anchor = "ANCHOR_RIGHT",
+		})
 
 		return copyBox
 	end
@@ -4753,7 +4868,12 @@ if not next(ns.WidgetToolbox) then
 		sliderFrame.slider:HookScript("OnMouseUp", function() PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON) end)
 
 		--Tooltip
-		if t.tooltip then wt.AddTooltip(sliderFrame.slider, t.tooltip.title or title, t.tooltip.lines, "ANCHOR_RIGHT") end
+		if t.tooltip then wt.AddTooltip({
+			parent = sliderFrame.slider,
+			title = t.tooltip.title or title,
+			lines = t.tooltip.lines,
+			anchor = "ANCHOR_RIGHT",
+		}) end
 
 		--[ Value Box ]
 
@@ -4991,8 +5111,8 @@ if not next(ns.WidgetToolbox) then
 			sliderFrame.slider:SetEnabled(state)
 			if t.valueBox ~= false then sliderFrame.valueBox.setEnabled(state) end
 			if t.sideButtons ~= false then
-				sliderFrame.decrease.setEnabled(wt.CheckDependencies({ [0] = { frame = sliderFrame.slider, evaluate = function(value) return value > t.value.min end }, }))
-				sliderFrame.increase.setEnabled(wt.CheckDependencies({ [0] = { frame = sliderFrame.slider, evaluate = function(value) return value < t.value.max end }, }))
+				sliderFrame.decrease.setEnabled(state and wt.CheckDependencies({ [0] = { frame = sliderFrame.slider, evaluate = function(value) return value > t.value.min end }, }))
+				sliderFrame.increase.setEnabled(state and wt.CheckDependencies({ [0] = { frame = sliderFrame.slider, evaluate = function(value) return value < t.value.max end }, }))
 			end
 			if label then label:SetFontObject(state and "GameFontNormal" or "GameFontDisable") end
 		end
@@ -5010,72 +5130,7 @@ if not next(ns.WidgetToolbox) then
 
 	--[ Color Picker ]
 
-	--Addon-scope data must be used to stop the separate color pickers from interfering with each other through the global Blizzard Color Picker frame
-	local colorPickerData = {}
-
-	---Set up and open the built-in Color Picker frame
-	---
-	---Using **colorPickerData** table, it must be set before call:
-	--- - **activeColorPicker** Button
-	--- - **startColors** table ― Color values are to be provided in this table
-	--- 	- **r** number ― Red | ***Range:*** (0, 1)
-	--- 	- **g** number ― Green | ***Range:*** (0, 1)
-	--- 	- **b** number ― Blue | ***Range:*** (0, 1)
-	--- 	- **a**? number *optional* ― Opacity | ***Range:*** (0, 1) | ***Default:*** 1
-	--- - **onColorUpdate** function
-	--- 	- @*param* **r** number ― Red | ***Range:*** (0, 1)
-	--- 	- @*param* **g** number ― Green | ***Range:*** (0, 1)
-	--- 	- @*param* **b** number ― Blue | ***Range:*** (0, 1)
-	--- 	- @*param* **a**? number *optional* ― Opacity | ***Range:*** (0, 1) | ***Default:*** 1
-	--- - **onCancel** function
-	--- 	- @*param* **r** number ― Red | ***Range:*** (0, 1)
-	--- 	- @*param* **g** number ― Green | ***Range:*** (0, 1)
-	--- 	- @*param* **b** number ― Blue | ***Range:*** (0, 1)
-	--- 	- @*param* **a**? number *optional* ― Opacity | ***Range:*** (0, 1) | ***Default:*** 1
-	local function OpenColorPicker()
-		--Color picker button background update utility
-		local function colorUpdate()
-			local r, g, b = ColorPickerFrame:GetColorRGB()
-			local a = OpacitySliderFrame:GetValue() or 1
-			colorPickerData.activeColorPicker:SetBackdropColor(r, g, b, a)
-			colorPickerData.backgroundGradient:SetVertexColor(r, g, b, 1)
-			_G[colorPickerData.activeColorPicker:GetName():gsub("PickerButton", "HEXBox")].setText(wt.ColorToHex(r, g, b, a))
-			colorPickerData.onColorUpdate(r, g, b, a)
-		end
-
-		--Set RGB
-		ColorPickerFrame:SetColorRGB(colorPickerData.startColors.r, colorPickerData.startColors.g, colorPickerData.startColors.b)
-		ColorPickerFrame.func = function() colorUpdate() end
-
-		--Set alpha
-		ColorPickerFrame.hasOpacity = colorPickerData.startColors.a ~= nil
-		if ColorPickerFrame.hasOpacity then
-			ColorPickerFrame.opacity = colorPickerData.startColors.a
-			ColorPickerFrame.opacityFunc = function() colorUpdate() end
-		end
-
-		--Reset on cancel
-		ColorPickerFrame.cancelFunc = function() --Using colorPickerData.startColors[k] instead of ColorPickerFrame.previousValues[i]
-			colorPickerData.activeColorPicker:SetBackdropColor(
-				colorPickerData.startColors.r,
-				colorPickerData.startColors.g,
-				colorPickerData.startColors.b,
-				colorPickerData.startColors.a or 1
-			)
-			_G[colorPickerData.activeColorPicker:GetName():gsub("PickerButton", "HEXBox")].setText(wt.ColorToHex(
-				colorPickerData.startColors.r,
-				colorPickerData.startColors.g,
-				colorPickerData.startColors.b,
-				colorPickerData.startColors.a or 1
-			))
-			colorPickerData.onCancel(colorPickerData.startColors.r, colorPickerData.startColors.g, colorPickerData.startColors.b, colorPickerData.startColors.a)
-		end
-
-		--Ready
-		ColorPickerFrame:Show()
-	end
-
-	---Set up the built-in Color Picker and create a button as a child of a container frame to open it
+	---Create a custom color picker frame with HEX(A) input while utilizing the Blizzard ColorPickerFrame opened with a button
 	---@param t table Parameters are to be provided in this table
 	--- - **parent** Frame — The frame to set as the parent of the new color picker button
 	--- - **name**? string *optional* — Unique string used to set the name of the new frame | ***Default:*** "ColorPicker"
@@ -5209,7 +5264,7 @@ if not next(ns.WidgetToolbox) then
 
 		--[ Color Picker Button ]
 
-		--Button: Blizzard Color Picker frame opener
+		--Create the Blizzard ColorPickerFrame opener button frame
 		colorPicker.pickerButton = wt.CreateButton({
 			parent = colorPicker,
 			name = "PickerButton",
@@ -5221,20 +5276,42 @@ if not next(ns.WidgetToolbox) then
 			position = { offset = { y = -16 } },
 			size = { width = 34, height = 22 },
 			customizable = true,
-			events = {
-				OnClick = function(self)
-					local r, g, b, a = self:GetBackdropColor()
-					colorPickerData = {
-						activeColorPicker = self,
-						backgroundGradient = colorPicker.pickerButton.gradient,
-						startColors = { r = r, g = g, b = b, a = a },
-						onColorUpdate = t.onColorUpdate,
-						onCancel = t.onCancel
-					}
-					OpenColorPicker()
-				end,
-			},
+			events = { OnClick = function(self)
+				--Starting colors
+				local startR, startG, startB, startA = self:GetBackdropColor()
+
+				--Color picker button background update utility
+				local function colorUpdate()
+					local r, g, b = ColorPickerFrame:GetColorRGB()
+					local a = OpacitySliderFrame:GetValue() or 1
+					colorPicker.setColor(r, g, b, a, true)
+				end
+
+				--Clear the color update functions
+				ColorPickerFrame.func = nil
+				ColorPickerFrame.opacityFunc = nil
+
+				--Load the color
+				ColorPickerFrame:SetColorRGB(startR, startG, startB)
+				ColorPickerFrame.hasOpacity = true
+				ColorPickerFrame.opacity = startA
+
+				--Open the Blizzard color picker
+				ColorPickerFrame:Show()
+
+				--Set the color update functions
+				ColorPickerFrame.func = colorUpdate
+				ColorPickerFrame.opacityFunc = colorUpdate
+
+				--Reset on cancel
+				ColorPickerFrame.cancelFunc = function()
+					colorPicker.setColor(startR, startG, startB, startA)
+					t.onCancel(startR, startG, startB, startA)
+				end
+			end, },
 		})
+
+		--Backdrop
 		wt.SetBackdrop(colorPicker.pickerButton, {
 			background = {
 				texture = {
@@ -5272,17 +5349,6 @@ if not next(ns.WidgetToolbox) then
 			end },
 		})
 
-		--Texture: Checker pattern
-		colorPicker.pickerButton.checker = wt.CreateTexture({
-			parent = colorPicker.pickerButton,
-			name = "AlphaBG",
-			position = { offset = { x = 2.5, y = -2.5 } },
-			size = { width = 29, height = 17 },
-			path = textures.alphaBG,
-			layer = "BACKGROUND",
-			tile = true,
-		})
-
 		--Texture: Background gradient
 		colorPicker.pickerButton.gradient = wt.CreateTexture({
 			parent = colorPicker.pickerButton,
@@ -5291,6 +5357,20 @@ if not next(ns.WidgetToolbox) then
 			size = { width = 14, height = 17 },
 			path = textures.gradientBG,
 			layer = "BACKGROUND",
+			level = -7,
+		})
+
+
+		--Texture: Checker pattern
+		colorPicker.pickerButton.checker = wt.CreateTexture({
+			parent = colorPicker.pickerButton,
+			name = "AlphaBG",
+			position = { offset = { x = 2.5, y = -2.5 } },
+			size = { width = 29, height = 17 },
+			path = textures.alphaBG,
+			layer = "BACKGROUND",
+			level = -8,
+			tile = true,
 		})
 
 		--[ HEX Box ]
@@ -5300,7 +5380,7 @@ if not next(ns.WidgetToolbox) then
 			name = "HEXBox",
 			title = strings.color.hex.label,
 			label = false,
-			tooltip = { lines = { [0] = { text = strings.color.hex.tooltip .. "\n\n" .. strings.misc.example .. ": #2266BB" .. (alpha and "AA" or "") }, } },
+			tooltip = { lines = { [0] = { text = strings.color.hex.tooltip .. "\n\n" .. strings.misc.example .. ": #2266BB" .. (alpha and "AA" or ""), }, } },
 			position = {
 				relativeTo = colorPicker.pickerButton,
 				relativePoint = "TOPRIGHT",
@@ -5313,14 +5393,11 @@ if not next(ns.WidgetToolbox) then
 			maxLetters = 7 + (alpha and 2 or 0),
 			events = {
 				OnChar = function(self, _, text) self.setText(text:gsub("^(#?)([%x]*).*", "%1%2"), false) end,
-				OnEnterPressed = function(self, text)
+				OnEnterPressed = function(_, text)
 					local r, g, b, a = wt.HexToColor(text)
-					colorPicker.pickerButton:SetBackdropColor(r, g, b, a or 1)
-					colorPicker.pickerButton.gradient:SetVertexColor(r, g, b, 1)
-					t.onColorUpdate(r, g, b, a or 1)
-					self.setText(text:upper())
+					colorPicker.setColor(r, g, b, a or 1, true)
 				end,
-				OnEscapePressed = function(self) self.setText(wt.ColorToHex(colorPicker.pickerButton:GetBackdropColor())) end,
+				OnEscapePressed = function(self) self.setText(wt.ColorToHex(colorPicker.getColor())) end,
 			},
 		})
 		wt.SetBackdrop(colorPicker.hexBox, {
@@ -5345,12 +5422,14 @@ if not next(ns.WidgetToolbox) then
 		colorPicker.getUniqueType = function() return "ColorPicker" end
 		colorPicker.isUniqueType = function(type) return type == "ColorPicker" end
 		colorPicker.getColor = function() return colorPicker.pickerButton:GetBackdropColor() end
-		colorPicker.setColor = function(r, g, b, a)
+		colorPicker.setColor = function(r, g, b, a, user)
 			colorPicker.pickerButton:SetBackdropColor(r, g, b, a or 1)
 			colorPicker.pickerButton.gradient:SetVertexColor(r, g, b, 1)
 			colorPicker.hexBox.setText(wt.ColorToHex(r, g, b, a))
+			if user and t.onColorUpdate then t.onColorUpdate(r, g, b, a) end
 		end
 		colorPicker.setEnabled = function(state)
+			state = state and not ColorPickerFrame:IsVisible()
 			colorPicker.pickerButton.setEnabled(state)
 			colorPicker.hexBox.setEnabled(state)
 			if colorPicker.label then colorPicker.label:SetFontObject(state and "GameFontNormal" or "GameFontDisable") end
@@ -5359,6 +5438,12 @@ if not next(ns.WidgetToolbox) then
 		--State & dependencies
 		if t.disabled then colorPicker.setEnabled(false) end
 		if t.dependencies then wt.SetDependencies(t.dependencies, colorPicker.setEnabled) end
+
+		--[ Events & behavior ]
+
+		--Custom behavior
+		ColorPickerFrame:HookScript("OnShow", function() colorPicker.setEnabled(false) end)
+		ColorPickerFrame:HookScript("OnHide", function() colorPicker.setEnabled(wt.CheckDependencies(t.dependencies)) end)
 
 		--[ Options Data ]
 
